@@ -1,0 +1,6 @@
+.git/
+.hg/
+
+syntax: glob
+*.pyc
+*~
