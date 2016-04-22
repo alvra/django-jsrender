@@ -329,22 +329,6 @@ class QuickTranslateTests(TranslationTestCase):
         ):
             list(translator.translate_nodelist(context, [node]))
 
-    def test_compatible_tag_returning_empty_text(self):
-        # make a 'tag type' that's not implemented
-        # but has a render_javascript method to be compatible
-        class ErroneousCompatibleNode(Node):
-            def render_javascript(self, translator, context):
-                yield ''  # empty text!
-        context = Context()
-        translator = self.get_translator([])
-        node = ErroneousCompatibleNode()
-        with self.assertRaisesRegex(
-            ValueError,
-            "Empty part from "
-            "<jsrender.tests.[a-zA-Z._<>]+.ErroneousCompatibleNode object at 0x[0-9a-f]+>"
-        ):
-            list(translator.translate_nodelist(context, [node]))
-
     def test_compatible_tag_unbalenced_indentation(self):
         # make a 'tag type' that's not implemented
         # but has a render_javascript method to be compatible

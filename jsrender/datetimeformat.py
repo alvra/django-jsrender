@@ -81,7 +81,7 @@ datetime_format_javascript_expressions = dict(
     # P = this expression is built below in build_formatchar_P()
     r=NotImplemented,  # TODO iso
     s=zero_padded_two_digit('%(x)s.getSeconds()'),
-    S='%(x)s.getDate()==1?"st":(%(x)s.getDate()==2?"nd":(%(x)s.getDate()==3?"rd":"th"))',
+    S='(11<=%(x)s.getDate()&&%(x)s.getDate()<=13?"th":%(x)s.getDate()%%10==1?"st":(%(x)s.getDate()%%10==2?"nd":(%(x)s.getDate()%%10==3?"rd":"th")))',
     t=NotImplemented,  # TODO number of days in month
     T=NotImplemented,  # TODO timezone of this machine
     u=zero_padded('%(x)s.getMilliseconds()*1000', 6),

@@ -410,6 +410,14 @@ class TagTests(SeleniumTranslationTestCase):
                 tplargs,
             )
 
+    def test_loop_empty(self):
+        for context, tplargs in self.mix_variables(empty=[]):
+            self.assertTranslation(
+                '{% for c in empty %} {{ c }} {% endfor %}',
+                context,
+                tplargs,
+            )
+
     def test_now(self):
         formatchars = [
             c for c, e

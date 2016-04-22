@@ -179,7 +179,8 @@ class Translator(object):
         if is_jsexpr(x):
             w = self.escape(x).expression
         elif isinstance(x, six.text_type):
-            assert x != ''
+            if x == '':
+                return ''
             w = as_javascript(self.escape(x))
         elif isinstance(x, six.binary_type):
             raise TypeError(x)
@@ -304,9 +305,8 @@ class Translator(object):
             for part in self.translate_node(context, node):
                 if not isinstance(part, six.text_type):
                     raise TypeError("Non text %r from %r" % (part, node))
-                if part == '':
-                    raise ValueError("Empty part from %r" % node)
-                yield part
+                if part != '':
+                    yield part
             post_level = self.indentation_level
             if pre_level != post_level:
                 raise AssertionError(
