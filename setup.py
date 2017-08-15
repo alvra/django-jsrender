@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='django-jsrender',
-    version='0.1',
+    version='0.2',
     description='Render Django templates into Javascript functions.',
     author='Alexander van Ratingen',
     author_email='alexander@van-ratingen.nl',
@@ -18,7 +18,7 @@ setup(
         'templates/jsrender/*.html',
     ]},
     install_requires=[
-        'django>=1.6',
+        'django>=1.8',
         'six',
     ],
     classifiers=[
