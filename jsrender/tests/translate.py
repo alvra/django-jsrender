@@ -2,7 +2,6 @@ from __future__ import unicode_literals
 import unittest
 import operator
 import string
-import django
 from django.template import (
     defaulttags, Template, Context, Node,
     Variable, VariableDoesNotExist, TemplateSyntaxError,
@@ -10,10 +9,7 @@ from django.template import (
 from django.utils.timezone import now
 from ..functions import JavascriptExpression
 from ..datetimeformat import datetime_format_javascript_expressions
-from .utils import (
-    TranslationTestCase, SeleniumTranslationTestCase,
-    skipUnlessSelenium, conditional_override_settings,
-)
+from .utils import TranslationTestCase, JavascriptTranslationTestCase
 
 
 class VariableResolutionTests(TranslationTestCase):
@@ -278,15 +274,8 @@ class QuickTranslateTests(TranslationTestCase):
             'var a="";var b=new Date();a+="Y";return a;',
         )
 
-    @conditional_override_settings(
-        django.VERSION < (1, 8),
-        INSTALLED_APPS=['django.contrib.webdesign'],
-    )
     def test_tag_lorem_with_variables(self):
-        if django.VERSION >= (1, 8):
-           tpl = '{% lorem num %}'
-        else:
-           tpl = '{% load webdesign %}{% lorem num %}'
+        tpl = '{% lorem num %}'
         nodelist = Template(tpl).nodelist
 
         t = self.get_translator(['num'])
@@ -501,8 +490,7 @@ class QuickTranslateTests(TranslationTestCase):
         self.assertIs(a, arg)
 
 
-@skipUnlessSelenium()
-class TranslateTests(SeleniumTranslationTestCase):
+class TranslateTests(JavascriptTranslationTestCase):
     def test_text(self):
         self.assertTranslation(
             "hello world",

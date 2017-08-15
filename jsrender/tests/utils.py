@@ -1,36 +1,13 @@
 from __future__ import unicode_literals
 import unittest
-import tempfile
 import itertools
 import six
 import contextlib
 try:
-    import selenium
-    import selenium.webdriver
-    import selenium.common.exceptions
+    import execjs
 except ImportError:
-    selenium = None
-from django.template import Template, Context
-from django.core.exceptions import ImproperlyConfigured
-try:
-    from django.template.backends.django import get_installed_libraries
-except ImportError:
-    # django < 1.9
-    from django.template.base import get_library as get_installed_libraries
-try:
-    from django.template.base import DebugLexer, Parser
-except ImportError:
-    # django < 1.9
-    from django.template.debug import (
-        DebugLexer as _DebugLexer,
-        DebugParser as Parser)
-    DebugLexer = lambda source: _DebugLexer(source, origin=None)
-try:
-    from django.test import override_settings
-except ImportError:
-    # django < 1.7
-    from django.test.utils import override_settings
-from django.conf import settings
+    execjs = None
+from django.template import Engine, Context
 from ..functions import express
 from ..translate import Translator
 from ..utils import html_escape_function
@@ -57,29 +34,8 @@ falsy_expressable_values = [
 ]
 
 
-def conditional_override_settings(condition, **settings):
-    if condition:
-        return override_settings(**settings)
-    else:
-        return lambda x: x
-
-
-def skipUnlessSelenium():
-    return unittest.skipIf(selenium is None, "Selenium must be installed to run these tests.")
-
-
-def compile_template_string(template_string, load=[]):
-    lexer_class, parser_class = DebugLexer, Parser
-    lexer = lexer_class(template_string)
-    parser = parser_class(lexer.tokenize())
-    if load:
-        for taglib in load:
-            lib = get_installed_libraries(taglib)
-            parser.add_library(lib)
-    nodelist = parser.parse()
-    template = Template('')
-    template.nodelist = nodelist
-    return template
+def compile_template_string(template_string):
+    return Engine().from_string(template_string)
 
 
 class JsrenderTestMixin(object):
@@ -139,140 +95,74 @@ class TranslationMixin(JsrenderTestMixin):
         )
 
 
-class SeleniumTranslationMixin(TranslationMixin):
+class JavascriptTranslationMixin(TranslationMixin):
     maxDiff = 1024
-    default_drivers = [
-        'PhantomJS',
-        'Firefox',
-        'Chrome',
-    ]
-
-    @classmethod
-    def get_selenium_driver_names(cls):
-        driver_name = getattr(settings, 'SELENIUM_DRIVER', None)
-        if driver_name is None:
-            return cls.default_drivers
-        else:
-            return [driver_name]
-
-    @classmethod
-    def get_selenium_driver(cls, *names):
-        if not names:
-            names = cls.get_selenium_driver_names()
-        for name in names:
-            driver_class = getattr(selenium.webdriver, name)
-            try:
-                return driver_class()
-            except selenium.common.exceptions.WebDriverException:
-                pass
-        raise ImproperlyConfigured(
-            "No selenium browser found, tried: %s"
-            % ', '.join(names)
-        )
 
     @classmethod
     def get_html_escape_function(cls):
         return html_escape_function(cls.html_escape_function)
 
-    @classmethod
-    def setUpClass(cls):
-        # start driver
-        driver = cls.get_selenium_driver()
-        # load page
-        tmpfile = tempfile.NamedTemporaryFile('w')
-        html = '''
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <script>
-                    %s
-                </script>
-            </head>
-            <body>
-            <textarea></textarea>
-            </body>
-        </html>
-        ''' % cls.get_html_escape_function()
-        tmpfile.write(html)
-        tmpfile.flush()
-        driver.get("file://" + tmpfile.name)
-        # save driver and file on class
-        cls.driver = driver
-        cls.tmpfile = tmpfile
-        # get dom element to render to, and save
-        cls.renderelement = driver.find_element_by_tag_name('textarea')
+    def setUp(self):
+        if execjs is None:
+            raise unittest.SkipTest(
+                "PyExecJs must be installed to run these tests.")
+        try:
+            self.javascript_runtime = execjs.get()
+        except execjs.RuntimeUnavailableError as e:
+            raise six.raise_from(
+                unittest.SkipTest(
+                    "PyExecJs could not find a javascript runtime."),
+                e)
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.tmpfile.close()
-        cls.driver.close()
-        cls.driver.quit()
+    def execute_javascript(self, js):
+        # this is slightly convoluted
+        # since execjs expects an expression
+        # instead of statements, so we wrap the
+        # statements in an anonymous function
+        code = '(function(){%s; return %s})()' % (
+            self.get_html_escape_function(),
+            js)
+        return self.javascript_runtime.eval(code)
 
-    def assertTranslationResultEqual(self, result, expected, function, arguments):
+    def assertTranslationResultEqual(self, result, expected, script):
         try:
             self.assertMultiLineEqual(result, expected)
         except AssertionError as e:
             raise AssertionError(
-                '%s\n---[ Function ]---\n%s\n---[ Call ]---\nresult = jstemplate(%s);' % (
+                '%s\n---[ Javascript ]---\n%s\n---' % (
                     e,
-                    function,
-                    ', '.join(arguments),
+                    script,
                 )
             )
 
-    def assertTranslation(self, template, context, arguments, expect=None, load=[]):
+    def assertTranslation(self, template, context, arguments, expect=None):
         # build stuff needed to translate
         translator = self.get_translator(arguments.keys())
-        template = compile_template_string(template, load)
+        template = compile_template_string(template)
         nodelist = template.nodelist
         # translate
         translator.indent()
         translate_context = Context(context)
-        if hasattr(translate_context, 'bind_template'):
-            # django >= 1.8
-            with translate_context.bind_template(template):
-                translated = translator.translate(translate_context, nodelist)
-        else:
-            # django < 1.8
+        with translate_context.bind_template(template):
             translated = translator.translate(translate_context, nodelist)
-        # build function
-        function = 'function jstemplate(%s){\n%s\n}' % (
-            ','.join(translator.arg_varnames),
-            translated,
-        )
-        # execute function to page element
+        # build javascript
         func_arguments = map(express, arguments.values())
-        script = '''
-        function test(){
-            var el = document.getElementsByTagName('textarea')[0];
-            %s
-            var result = jstemplate(%s);
-            el.value = result;
-        }
-        test();
-        ''' % (
-            function,
-            ','.join(func_arguments),
+        script = '(function(\n  %s\n){\n%s\n})(\n  %s\n)' % (
+            ',\n  '.join(translator.arg_varnames),
+            translated,
+            ',\n  '.join(func_arguments),
         )
-        try:
-            self.driver.execute_script(script)
-        except selenium.common.exceptions.WebDriverException as e:
-            raise
-            six.raise_from(Exception(
-                "Error rendering jstemplate: %r\n%s\n%s"
-                % (e.msg, function, func_arguments)
-            ), e)
-        # get result from page element
-        result = self.renderelement.get_attribute('value')
+        # execute javascript
+        result = self.execute_javascript(script)
         # render template itself
         new_context = Context(context)
         new_context.update(arguments)  # arguments takes precent over context
         expected_result = template.render(new_context)
         # now check that the Javascript function has the same result as the Django template
-        self.assertTranslationResultEqual(result, expected_result, function, func_arguments)
+        self.assertTranslationResultEqual(result, expected_result, script)
         # if an expectation is given, check that too
         if expect is not None:
-            self.assertTranslationResultEqual(result, expect, function, func_arguments)
+            self.assertTranslationResultEqual(result, expect, script)
 
 
 class JsrenderTestCase(JsrenderTestMixin, unittest.TestCase):
@@ -283,5 +173,5 @@ class TranslationTestCase(TranslationMixin, unittest.TestCase):
     pass
 
 
-class SeleniumTranslationTestCase(SeleniumTranslationMixin, unittest.TestCase):
+class JavascriptTranslationTestCase(JavascriptTranslationMixin, unittest.TestCase):
     pass

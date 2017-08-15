@@ -16,7 +16,15 @@ def express(value):
     if isinstance(value, JavascriptExpression):
         return value.expression
     elif isinstance(value, datetime.datetime):
-        return 'new Date("%s")' % value.isoformat()
+        return 'new Date({y},{m},{d},{h},{min},{s},{milli})'.format(
+            y=value.year,
+            m=value.month - 1,
+            d=value.day,
+            h=value.hour,
+            min=value.minute,
+            s=value.second,
+            milli=value.microsecond/1000,
+        )
     else:
         return as_javascript(value)
 

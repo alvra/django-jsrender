@@ -3,13 +3,12 @@ import math
 from django.utils.timezone import now
 from ..datetimeformat import datetime_format_javascript_expressions
 from .utils import (
-    SeleniumTranslationTestCase, skipUnlessSelenium,
+    JavascriptTranslationTestCase,
     falsy_values, truthy_expressable_values, falsy_expressable_values,
 )
 
 
-@skipUnlessSelenium()
-class FilterTests(SeleniumTranslationTestCase):
+class FilterTests(JavascriptTranslationTestCase):
     def test_add(self):
         self.assertTranslation(
             '{{ spam|add:"2" }}',
@@ -94,24 +93,42 @@ class FilterTests(SeleniumTranslationTestCase):
             '{{ someday|date:"P" }}',
             dict(someday=date),
             {},
+            'midnight',
         )
         date = now().replace(hour=12, minute=0)
         self.assertTranslation(
             '{{ someday|date:"P" }}',
             {},
             dict(someday=date),
+            'noon',
+        )
+        date = now().replace(hour=6, minute=0)
+        self.assertTranslation(
+            '{{ someday|date:"P" }}',
+            {},
+            dict(someday=date),
+            '6 a.m.',
+        )
+        date = now().replace(hour=18, minute=0)
+        self.assertTranslation(
+            '{{ someday|date:"P" }}',
+            {},
+            dict(someday=date),
+            '6 p.m.',
         )
         date = now().replace(hour=6, minute=11)
         self.assertTranslation(
             '{{ someday|date:"P" }}',
             {},
             dict(someday=date),
+            '6:11 a.m.',
         )
         date = now().replace(hour=18, minute=11)
         self.assertTranslation(
             '{{ someday|date:"P" }}',
             {},
             dict(someday=date),
+            '6:11 p.m.',
         )
 
     def test_date_noargs(self):

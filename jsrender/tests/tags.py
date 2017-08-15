@@ -1,17 +1,14 @@
 from __future__ import unicode_literals
 import unittest
 import itertools
-import django
 from ..datetimeformat import datetime_format_javascript_expressions
 from .utils import (
     truthy_values, falsy_values,
-    SeleniumTranslationTestCase,
-    skipUnlessSelenium, conditional_override_settings,
+    JavascriptTranslationTestCase,
 )
 
 
-@skipUnlessSelenium()
-class TagTests(SeleniumTranslationTestCase):
+class TagTests(JavascriptTranslationTestCase):
     def test_if(self):
         for value in truthy_values:
             with self.subTest(true_value=value):
@@ -459,7 +456,6 @@ class TagTests(SeleniumTranslationTestCase):
             {},
         )
 
-    @unittest.skipIf(django.VERSION < (1, 8), "Requires Django >= 1.8")
     def test_now_with_asvar(self):
         self.assertTranslation(
             '{% now "Y" as year %}{{ year }}',
@@ -525,47 +521,32 @@ class TagTests(SeleniumTranslationTestCase):
                     {},
                 )
 
-    @conditional_override_settings(
-        django.VERSION < (1, 8),
-        INSTALLED_APPS=['django.contrib.webdesign'],
-    )
     def test_lorem(self):
-        load = [] if django.VERSION >= (1, 8) else ['webdesign']
         self.assertTranslation(
             '{% lorem %}',
             {},
             {},
-            load=load,
         )
         self.assertTranslation(
             '{% lorem 1 %}',
             {},
             {},
-            load=load,
         )
         self.assertTranslation(
             '{% lorem 1 w %}',
             {},
             {},
-            load=load,
         )
         # no way to test random argument
 
-    @conditional_override_settings(
-        django.VERSION < (1, 8),
-        INSTALLED_APPS=['django.contrib.webdesign'],
-    )
     def test_lorem_with_variables(self):
-        load = [] if django.VERSION >= (1, 8) else ['webdesign']
         self.assertTranslation(
             '{% lorem num %}',
             dict(num=1),
             {},
-            load=load,
         )
         self.assertTranslation(
             '{% lorem num w %}',
             dict(num=1),
             {},
-            load=load,
         )

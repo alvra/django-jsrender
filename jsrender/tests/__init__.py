@@ -2,13 +2,12 @@ from .utils import (
     truthy_values,
     falsy_values,
     falsy_expressable_values,
-    skipUnlessSelenium,
     JsrenderTestMixin,
     JsrenderTestCase,
     TranslationMixin,
-    SeleniumTranslationMixin,
+    JavascriptTranslationMixin,
     TranslationTestCase,
-    SeleniumTranslationTestCase,
+    JavascriptTranslationTestCase,
 )
 from .functions import (
     EscapeTests,

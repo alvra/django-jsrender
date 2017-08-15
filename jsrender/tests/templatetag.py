@@ -1,7 +1,7 @@
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 from django.template import Template, Context, VariableDoesNotExist, TemplateSyntaxError
 from ..templatetags.jsrender import TemplateRenderNode, TemplateFunction
-from .utils import TranslationMixin, override_settings
+from .utils import TranslationMixin
 
 
 @override_settings(INSTALLED_APPS=['jsrender'])
