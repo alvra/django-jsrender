@@ -12,8 +12,19 @@ except ImportError:
     selenium = None
 from django.template import Template, Context
 from django.core.exceptions import ImproperlyConfigured
-from django.template.base import get_library
-from django.template.debug import DebugLexer, DebugParser
+try:
+    from django.template.backends.django import get_installed_libraries
+except ImportError:
+    # django < 1.9
+    from django.template.base import get_library as get_installed_libraries
+try:
+    from django.template.base import DebugLexer, Parser
+except ImportError:
+    # django < 1.9
+    from django.template.debug import (
+        DebugLexer as _DebugLexer,
+        DebugParser as Parser)
+    DebugLexer = lambda source: _DebugLexer(source, origin=None)
 try:
     from django.test import override_settings
 except ImportError:
@@ -58,13 +69,12 @@ def skipUnlessSelenium():
 
 
 def compile_template_string(template_string, load=[]):
-    origin = None
-    lexer_class, parser_class = DebugLexer, DebugParser
-    lexer = lexer_class(template_string, origin)
+    lexer_class, parser_class = DebugLexer, Parser
+    lexer = lexer_class(template_string)
     parser = parser_class(lexer.tokenize())
     if load:
         for taglib in load:
-            lib = get_library(taglib)
+            lib = get_installed_libraries(taglib)
             parser.add_library(lib)
     nodelist = parser.parse()
     template = Template('')

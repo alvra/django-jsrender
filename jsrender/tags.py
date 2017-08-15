@@ -211,7 +211,7 @@ def translate_tag_now(translator, context, node):
 @register(defaulttags.FilterNode)
 def translate_tag_filter(translator, context, node):
     tempvar = translator.get_varname()
-    yield 'var %s = "";' % tempvar
+    yield translator.assign(tempvar, '')
     with translator.redirect_writing(tempvar):
         for part in translator.translate_nodelist(context, node.nodelist):
             yield part
@@ -245,7 +245,6 @@ def translate_static_tag(translator, context, node):
         yield translator.write(text)
 
 
-@register(defaulttags.SsiNode)
 @register(defaulttags.LoadNode)
 def translate_invalid_tag(translator, context, node):
     raise TemplateSyntaxError(

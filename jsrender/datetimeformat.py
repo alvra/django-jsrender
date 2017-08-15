@@ -5,8 +5,15 @@ from django.utils.dates import (
 )
 from django.utils.functional import lazy
 from django.utils.encoding import force_text
-from django.utils.translation import ugettext_lazy as _, ugettext, string_concat as concat
+from django.utils.translation import ugettext_lazy as _, ugettext
 
+try:
+    from django.utils.text import format_lazy
+    def concat(*args):
+        return format_lazy('{}' * len(args), *args)
+except ImportError:
+    # django < 1.11
+    from django.utils.translation import string_concat as concat
 
 # For reference:
 # https://github.com/django/django/blob/master/django/utils/dateformat.py

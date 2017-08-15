@@ -13,7 +13,6 @@ from ..datetimeformat import datetime_format_javascript_expressions
 from .utils import (
     TranslationTestCase, SeleniumTranslationTestCase,
     skipUnlessSelenium, conditional_override_settings,
-    compile_template_string,
 )
 
 
@@ -201,7 +200,6 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_invalid_tags(self):
         invalids = [
-            ('ssi', '"somewere"'),
             ('load', 'jsrender'),
         ]
         t = self.get_translator([''])
@@ -285,9 +283,12 @@ class QuickTranslateTests(TranslationTestCase):
         INSTALLED_APPS=['django.contrib.webdesign'],
     )
     def test_tag_lorem_with_variables(self):
-        tpl = '{% lorem num %}'
-        load = [] if django.VERSION >= (1, 8) else ['webdesign']
-        nodelist = compile_template_string(tpl, load=load).nodelist
+        if django.VERSION >= (1, 8):
+           tpl = '{% lorem num %}'
+        else:
+           tpl = '{% load webdesign %}{% lorem num %}'
+        nodelist = Template(tpl).nodelist
+
         t = self.get_translator(['num'])
         with self.assertRaises(NotImplementedError):
             t.translate(Context(), nodelist)
