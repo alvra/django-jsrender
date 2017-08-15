@@ -5,7 +5,14 @@ from ..datetimeformat import datetime_format_javascript_expressions
 from .utils import (
     truthy_values, falsy_values,
     JavascriptTranslationTestCase,
+    template_from_string,
 )
+
+try:
+    from unittest import mock
+except ImportError:
+    # python < 3.3
+    import mock  # pip install mock
 
 
 class TagTests(JavascriptTranslationTestCase):
@@ -480,6 +487,43 @@ class TagTests(JavascriptTranslationTestCase):
             {},
             {},
             ""
+        )
+
+    def test_include(self):
+        self.assertTranslation(
+            'a{% include tpl with extra="c" %}d',
+            dict(tpl=template_from_string('{{ var }}{{ extra }}'), var='b'),
+            {},
+            "abcd"
+        )
+
+    def test_include_loaded(self):
+        with mock.patch('django.template.engine.Engine.find_template') as find:
+            find.return_value = template_from_string('b'), None
+            self.assertTranslation(
+                'a{% include "other.tpl" %}c',
+                {},
+                {},
+                "abc"
+            )
+            # node the template is loaded twice,
+            # once when translating to javascript
+            # and then again when performing
+            # the standard rendering to compare results with
+            find.assert_called_with('other.tpl')
+
+    def test_include_template_attr(self):
+        class HasTemplateAttr:
+            template = template_from_string('{{ var }}{{ extra }}')
+
+            def render(self):
+                raise AssertionError("This should not be called")
+
+        self.assertTranslation(
+            'a{% include tpl with extra="c" %}d',
+            dict(tpl=HasTemplateAttr(), var='b'),
+            {},
+            "abcd"
         )
 
     def test_filter(self):

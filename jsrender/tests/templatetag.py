@@ -1,10 +1,9 @@
-from django.test import SimpleTestCase, override_settings
-from django.template import Template, Context, VariableDoesNotExist, TemplateSyntaxError
+from django.test import SimpleTestCase
+from django.template import Context, VariableDoesNotExist, TemplateSyntaxError
 from ..templatetags.jsrender import TemplateRenderNode, TemplateFunction
-from .utils import TranslationMixin
+from .utils import TranslationMixin, template_from_string, nodelist_from_string
 
 
-@override_settings(INSTALLED_APPS=['jsrender'])
 class TemplateTagTests(TranslationMixin, SimpleTestCase):
     def test_define_tag(self):
         tpl = """
@@ -13,7 +12,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
         {% jsrender "thename()" %}hello{% endjsrender %}
         """
         ctx = {}
-        t = Template(tpl)
+        t = template_from_string(tpl)
         defnode = t.nodelist[3]
         self.assertIsInstance(defnode, TemplateRenderNode)
         self.assertEqual(defnode.function, 'thename')
@@ -46,7 +45,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
         {% jsrender "thename(arg, bal)" %}hello {{ arg }}{% endjsrender %}
         """
         ctx = {}
-        t = Template(tpl)
+        t = template_from_string(tpl)
         defnode = t.nodelist[3]
         self.assertIsInstance(defnode, TemplateRenderNode)
         self.assertEqual(defnode.function, 'thename')
@@ -80,7 +79,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
         {{ spam }}
         """
         ctx = {}
-        t = Template(tpl)
+        t = template_from_string(tpl)
         defnode = t.nodelist[3]
         self.assertIsInstance(defnode, TemplateRenderNode)
         self.assertEqual(defnode.function, 'thename')
@@ -119,7 +118,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
             "jsrender tag's function signature argument "
             "should be in quotes"
         ):
-            Template(tpl)
+            nodelist_from_string(tpl)
 
     def test_define_tag_missing_parentheses_around_arguments(self):
         tpl = """
@@ -132,7 +131,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
             "jsrender tag's function signature should "
             "contain arguments in parentheses"
         ):
-            Template(tpl)
+            nodelist_from_string(tpl)
 
     def test_define_tag_invalid_no_argument(self):
         tpl = """
@@ -145,7 +144,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
             "jsrender tag requires one argument, "
             "with an optional 'as varname'"
         ):
-            Template(tpl)
+            nodelist_from_string(tpl)
 
     def test_define_tag_invalid_extra_argument(self):
         tpl = """
@@ -158,7 +157,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
             "jsrender tag requires one argument, "
             "with an optional 'as varname'"
         ):
-            Template(tpl)
+            nodelist_from_string(tpl)
 
     def test_define_tag_invalid_two_extra_argument(self):
         tpl = """
@@ -171,7 +170,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
             "jsrender tag requires one argument, "
             "with an optional 'as varname'"
         ):
-            Template(tpl)
+            nodelist_from_string(tpl)
 
     def test_define_tag_invalid_signature_argument(self):
         tpl = """
@@ -184,7 +183,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
             "jsrender tag's function signature should "
             "contain valid javascript arguments"
         ):
-            Template(tpl)
+            nodelist_from_string(tpl)
 
     def test_render_tag(self):
         tpl = """
@@ -195,7 +194,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
         {% jsexecute greeting %}
         """
         ctx = {}
-        t = Template(tpl)
+        t = template_from_string(tpl)
         defnode = t.nodelist[3]
         self.assertIsInstance(defnode, TemplateRenderNode)
         self.assertEqual(defnode.function, 'greetme')
@@ -225,7 +224,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
         {% jsexecute greeting with where="World" %}
         """
         ctx = {}
-        t = Template(tpl)
+        t = template_from_string(tpl)
         defnode = t.nodelist[3]
         self.assertIsInstance(defnode, TemplateRenderNode)
         self.assertEqual(defnode.function, 'greetme')
@@ -259,7 +258,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
             "jsexecute tag requires one argument, "
             "with optional extra values as 'with x=1'"
         ):
-            Template(tpl)
+            nodelist_from_string(tpl)
 
     def test_render_tag_invalid_extra_argument(self):
         tpl = """
@@ -274,7 +273,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
             "jsexecute tag requires one argument, "
             "with optional extra values as 'with x=1'"
         ):
-            Template(tpl)
+            nodelist_from_string(tpl)
 
     def test_render_tag_invalid_literal_argument(self):
         tpl = """
@@ -288,7 +287,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
             TemplateSyntaxError,
             "jsexecute tag's template argument cannot be a string literal"
         ):
-            Template(tpl)
+            nodelist_from_string(tpl)
 
     def test_render_tag_missing_template(self):
         tpl = """
@@ -297,7 +296,7 @@ class TemplateTagTests(TranslationMixin, SimpleTestCase):
         {% jsexecute greeting with where="World" %}
         """
         ctx = {}
-        t = Template(tpl)
+        t = template_from_string(tpl)
         c = Context(ctx)
 
         with self.assertRaisesRegex(VariableDoesNotExist, "greeting"):

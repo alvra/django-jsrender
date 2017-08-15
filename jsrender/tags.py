@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 import six
 from django.template import defaulttags, TemplateSyntaxError
+from django.template.loader_tags import IncludeNode
 from django.templatetags import i18n
 from django.conf import settings
 from django.utils.encoding import force_text
@@ -206,6 +207,33 @@ def translate_tag_now(translator, context, node):
                     force_text(output),
                     x=make_jsexpr(varname)
                 )))
+
+
+@register(IncludeNode)
+def translate_tag_include(translator, context, node):
+    template = node.template.resolve(context)
+    if is_jsexpr(template):
+        raise NotImplementedError(
+            "Cannot translate include tags "
+            "with variable templates to Javascript"
+        )
+    if not callable(getattr(template, 'render', None)):
+        # not a regular template, try loading it
+        template = context.template.engine.get_template(template)
+    elif hasattr(template, 'template'):
+        # this branch is includes to mirror the implementation
+        # of django's IncludeNode.render(...)
+        template = template.template
+    nodelist = template.nodelist
+    values = {
+        name: var.resolve(context)
+        for name, var in node.extra_context.items()
+    }
+    if node.isolated_context:
+        context = context.new()
+    with context.push(values):
+        for part in translator.translate_nodelist(context, nodelist):
+            yield part
 
 
 @register(defaulttags.FilterNode)

@@ -34,8 +34,15 @@ falsy_expressable_values = [
 ]
 
 
-def compile_template_string(template_string):
-    return Engine().from_string(template_string)
+def template_from_string(template_string):
+    return Engine(libraries={
+        'jsrender': 'jsrender.templatetags.jsrender',
+    }).from_string(template_string)
+
+
+def nodelist_from_string(template_string):
+    template = template_from_string(template_string)
+    return template.nodelist
 
 
 class JsrenderTestMixin(object):
@@ -138,7 +145,7 @@ class JavascriptTranslationMixin(TranslationMixin):
     def assertTranslation(self, template, context, arguments, expect=None):
         # build stuff needed to translate
         translator = self.get_translator(arguments.keys())
-        template = compile_template_string(template)
+        template = template_from_string(template)
         nodelist = template.nodelist
         # translate
         translator.indent()

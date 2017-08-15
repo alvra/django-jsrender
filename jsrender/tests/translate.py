@@ -3,13 +3,16 @@ import unittest
 import operator
 import string
 from django.template import (
-    defaulttags, Template, Context, Node,
+    defaulttags, Context, Node,
     Variable, VariableDoesNotExist, TemplateSyntaxError,
 )
 from django.utils.timezone import now
 from ..functions import JavascriptExpression
 from ..datetimeformat import datetime_format_javascript_expressions
-from .utils import TranslationTestCase, JavascriptTranslationTestCase
+from .utils import (
+    TranslationTestCase, JavascriptTranslationTestCase,
+    template_from_string, nodelist_from_string
+)
 
 
 class VariableResolutionTests(TranslationTestCase):
@@ -92,7 +95,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_text(self):
         tpl = "hello world"
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator([])
         self.assertJsEqual(
             t.translate(Context(), nodelist),
@@ -101,7 +104,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_text_no_escaping(self):
         tpl = "hello<br/>world"
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator([])
         self.assertJsEqual(
             t.translate(Context(), nodelist),
@@ -110,7 +113,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_variable(self):
         tpl = "hello {{ spam }}"
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
 
         t = self.get_translator([])
         self.assertJsEqual(
@@ -134,7 +137,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_variable_integer(self):
         tpl = "{{ number }}"
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
 
         t = self.get_translator([])
         self.assertJsEqual(
@@ -150,15 +153,14 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_missing_variable(self):
         tpl = "hello {{ spam }}"
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator([])
         with self.assertRaises(VariableDoesNotExist):
             t.translate(Context(), nodelist)
 
     def test_variable_escaping(self):
         tpl = "hello {{ spam }}"
-        nodelist = Template(tpl).nodelist
-
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator([])
         self.assertJsEqual(
             t.translate(Context(dict(spam='a<br/>c')), nodelist),
@@ -167,7 +169,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_variable_lookup(self):
         tpl = "hello {{ spam.ham }}"
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
 
         t = self.get_translator([])
         self.assertJsEqual(
@@ -189,7 +191,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_missing_variable_lookup(self):
         tpl = "hello {{ spam.ham }}"
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator([])
         with self.assertRaises(VariableDoesNotExist):
             t.translate(Context(), nodelist)
@@ -202,20 +204,20 @@ class QuickTranslateTests(TranslationTestCase):
         for tag, arg in invalids:
             with self.subTest(tag=tag):
                 tpl = '{% ' + tag + ' ' + arg + '  %}'
-                nodelist = Template(tpl).nodelist
+                nodelist = nodelist_from_string(tpl)
                 with self.assertRaises(TemplateSyntaxError):
                     t.translate(Context(), nodelist)
 
     def test_tag_loop_try_output_forloop(self):
         tpl = '{% for val in list %}{{ forloop }}{% endfor %}'
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator(['list'])
         with self.assertRaises(TemplateSyntaxError):
             t.translate(Context(), nodelist)
 
     def test_tag_loop_try_nonexisting_forloop_attribute(self):
         tpl = '{% for val in list %}{{ forloop.doesnotexist }}{% endfor %}'
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator(['list'])
         with self.assertRaisesRegex(
             VariableDoesNotExist,
@@ -230,7 +232,7 @@ class QuickTranslateTests(TranslationTestCase):
             is_implemented = expr is not NotImplementedError
             with self.subTest(letter=letter, is_noop=is_noop, is_implemented=is_implemented):
                 tpl = '{% now "' + letter + '" %}'
-                nodelist = Template(tpl).nodelist
+                nodelist = nodelist_from_string(tpl)
                 t = self.get_translator([])
                 if expr is None:
                     self.assertJsEqual(
@@ -253,31 +255,36 @@ class QuickTranslateTests(TranslationTestCase):
     def test_tag_now_with_variable_format(self):  # pragma: no cover
         tpl = '{% now fmt %}'
         tpl = '{% extends fmt %}'
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
         node = nodelist[0]
         self.assertIsInstance(node, defaulttags.NowNode)
         fmt = node.format_string
         self.assertIsInstance(fmt, Variable)
         self.assertIsInstance(fmt.var, 'fmt')
-
         t = self.get_translator(['fmt'])
         with self.assertRaises(NotImplementedError):
             t.translate(Context(dict()), nodelist)
 
     def test_tag_now_escaped_char(self):
         tpl = '{% now "\\Y" %}'
-        nodelist = Template(tpl).nodelist
-
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator([])
         self.assertJsEqual(
             t.translate(Context(), nodelist),
             'var a="";var b=new Date();a+="Y";return a;',
         )
 
+    def test_include_isolated(self):
+        tpl = '{% include tpl only %}'
+        nodelist = nodelist_from_string(tpl)
+        t = self.get_translator([])
+        tpl = template_from_string('{{ var }}')
+        with self.assertRaises(VariableDoesNotExist):
+            t.translate(Context(dict(tpl=tpl, var=1)), nodelist)
+
     def test_tag_lorem_with_variables(self):
         tpl = '{% lorem num %}'
-        nodelist = Template(tpl).nodelist
-
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator(['num'])
         with self.assertRaises(NotImplementedError):
             t.translate(Context(), nodelist)
@@ -352,7 +359,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_filter_add(self):
         tpl = '{{ spam|add:"2" }}'
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
 
         t = self.get_translator([])
         self.assertJsEqual(
@@ -368,7 +375,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_filter_add_variable(self):
         tpl = '{{ spam|add:ham }}'
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
 
         t = self.get_translator([])
         self.assertJsEqual(
@@ -401,7 +408,7 @@ class QuickTranslateTests(TranslationTestCase):
             is_implemented = expr is not NotImplementedError
             with self.subTest(letter=letter, is_noop=is_noop, is_implemented=is_implemented):
                 tpl = '{{ someday|date:"' + letter + '" }}'
-                nodelist = Template(tpl).nodelist
+                nodelist = nodelist_from_string(tpl)
                 t = self.get_translator(['someday'])
                 if expr is None:
                     self.assertJsEqual(
@@ -419,8 +426,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_filter_date_escaped_char(self):
         tpl = '{{ someday|date:"\\Y" }}'
-        nodelist = Template(tpl).nodelist
-
+        nodelist = nodelist_from_string(tpl)
         t = self.get_translator(['someday'])
         self.assertJsEqual(
             t.translate(Context(), nodelist),
@@ -429,7 +435,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_filter_date_with_variable_format(self):
         tpl = '{{ someday|date:format }}'
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
 
         t = self.get_translator(['format', 'someday'])
         with self.assertRaises(NotImplementedError):
@@ -441,7 +447,7 @@ class QuickTranslateTests(TranslationTestCase):
 
     def test_filter_floatformat_with_variable_format(self):
         tpl = '{{ number|floatformat:format }}'
-        nodelist = Template(tpl).nodelist
+        nodelist = nodelist_from_string(tpl)
 
         t = self.get_translator(['format', 'number'])
         with self.assertRaises(NotImplementedError):
