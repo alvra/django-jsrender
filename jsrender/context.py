@@ -23,10 +23,14 @@ class TemplateFunction(object):
         )
 
     @property
+    def signature(self):
+        return ','.join(self.varnames)
+
+    @property
     def function(self):
         return mark_safe('function %s(%s){%s}' % (
             self.funcname,
-            ','.join(self.varnames),
+            self.signature,
             self.body,
         ))
 
