@@ -600,7 +600,7 @@ For example, a simple tag might have a `render_javascript` method like this.
     class LessThanTwoNode(Node):
         ...
 
-        def render_javascript(translator, context, node):
+        def render_javascript(self, translator, context):
             yield 'if(number<2){'
             with translator.indented():
                 yield translator.write('less than two')
