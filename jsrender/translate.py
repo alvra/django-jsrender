@@ -6,6 +6,7 @@ from django.conf import settings
 from django.template import defaulttags
 from django.template.base import FilterExpression, TextNode, VariableNode
 from django.template.smartif import TokenBase, Literal
+from django.utils.safestring import SafeText
 from .functions import (
     as_javascript, express, escape, mark_safe,
     concatenate, make_jsexpr, is_jsexpr, is_escaped,
@@ -197,6 +198,8 @@ class Translator(object):
         if isinstance(expression, Literal):
             expression = expression.value
         assert isinstance(expression, FilterExpression)
+        if isinstance(expression.var, SafeText):
+            return expression.var
         value = expression.var.resolve(context)
         for func, args in expression.filters:
             args = [a.resolve(context) if l else a for l, a in args]

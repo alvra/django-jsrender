@@ -423,6 +423,14 @@ class TagTests(JavascriptTranslationTestCase):
                 tplargs,
             )
 
+    def test_loop_literal(self):
+        self.assertTranslation(
+            '{% for char in "abc" %}{{ char }}{% endfor %}',
+            {},
+            {},
+            'abc',
+        )
+
     def test_now(self):
         formatchars = [
             c for c, e
