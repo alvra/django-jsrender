@@ -2,11 +2,34 @@ from __future__ import unicode_literals
 import unittest
 import six
 from django.utils.safestring import SafeText
+from django.utils.translation import gettext_lazy
 from ..functions import (
-    escape, mark_safe, concatenate, is_attributable,
+    as_javascript, escape, mark_safe, concatenate, is_attributable,
     JavascriptExpression, SafeJavascriptExpression
 )
 from .utils import JsrenderTestCase
+
+
+class AsJavascriptTests(unittest.TestCase):
+    def test_string(self):
+        self.assertEqual(
+            as_javascript('ham'),
+            '"ham"')
+
+    def test_integer(self):
+        self.assertEqual(
+            as_javascript(123),
+            '123')
+
+    def test_float(self):
+        self.assertEqual(
+            as_javascript(123.456),
+            '123.456')
+
+    def test_lazy_translated_text(self):
+        self.assertEqual(
+            as_javascript(gettext_lazy('ham')),
+            '"ham"')
 
 
 class EscapeTests(JsrenderTestCase):

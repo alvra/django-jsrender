@@ -4,10 +4,13 @@ import json
 import six
 from django.utils import html
 from django.utils.safestring import SafeText
+from django.utils.functional import Promise
 
 
 def as_javascript(value):
     "Translate a pure Python value to Javascript"
+    if isinstance(value, Promise):
+        value = six.text_type(value)
     return six.text_type(json.dumps(value))
 
 
