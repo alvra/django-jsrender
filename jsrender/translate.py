@@ -9,7 +9,7 @@ from django.template.base import (
 from django.template.smartif import TokenBase, Literal
 from django.utils.safestring import SafeText
 from .functions import (
-    as_javascript, express, escape, mark_safe,
+    is_lazy_text, resolve_lazy_text, as_javascript, express, escape, mark_safe,
     concatenate, make_jsexpr, is_jsexpr, is_escaped,
 )
 from .tags import tag_translators
@@ -180,7 +180,8 @@ class Translator(object):
         "Make the Javascript function output a value or expression."
         if is_jsexpr(x):
             w = self.escape(x).expression
-        elif isinstance(x, six.text_type):
+        elif isinstance(x, six.text_type) or is_lazy_text(x):
+            x = resolve_lazy_text(x)
             if x == '':
                 return ''
             w = as_javascript(self.escape(x))

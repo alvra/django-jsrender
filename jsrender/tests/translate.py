@@ -7,6 +7,7 @@ from django.template import (
     Variable, VariableDoesNotExist, TemplateSyntaxError,
 )
 from django.utils.timezone import now
+from django.utils.translation import gettext_lazy
 from ..functions import JavascriptExpression
 from ..datetimeformat import datetime_format_javascript_expressions
 from .utils import (
@@ -157,6 +158,16 @@ class QuickTranslateTests(TranslationTestCase):
         self.assertJsEqual(
             t.translate(Context(), nodelist),
             'var a="";a+=escape(b);return a;',
+        )
+
+    def test_variable_lazy_translated_text(self):
+        tpl = "{{ name }}"
+        nodelist = nodelist_from_string(tpl)
+
+        t = self.get_translator([])
+        self.assertJsEqual(
+            t.translate(Context(dict(name=gettext_lazy('ham'))), nodelist),
+            'var a="";a+="ham";return a;',
         )
 
     def test_missing_variable(self):

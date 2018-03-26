@@ -7,10 +7,21 @@ from django.utils.safestring import SafeText
 from django.utils.functional import Promise
 
 
+def is_lazy_text(value):
+    return isinstance(value, Promise)
+
+
+def resolve_lazy_text(value):
+    if is_lazy_text(value):
+        return six.text_type(value)
+    else:
+        return value
+
+
 def as_javascript(value):
     "Translate a pure Python value to Javascript"
-    if isinstance(value, Promise):
-        value = six.text_type(value)
+    if is_lazy_text(value):
+        value = resolve_lazy_text(value)
     return six.text_type(json.dumps(value))
 
 
