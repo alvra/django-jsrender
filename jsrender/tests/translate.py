@@ -208,6 +208,28 @@ class QuickTranslateTests(TranslationTestCase):
                 with self.assertRaises(TemplateSyntaxError):
                     t.translate(Context(), nodelist)
 
+    def test_tag_if_condition_or_lazy_resolution(self):
+        tpl = '{% if a or missing %}x{% endif %}'
+        nodelist = nodelist_from_string(tpl)
+        t = self.get_translator([])
+        with self.assertRaises(VariableDoesNotExist):
+            t.translate(Context(dict(a=False)), nodelist)
+        self.assertJsEqual(
+            t.translate(Context(dict(a=True)), nodelist),
+            'var a="";a+="x";return a;',
+        )
+
+    def test_tag_if_condition_and_lazy_resolution(self):
+        tpl = '{% if a and missing %}x{% endif %}'
+        nodelist = nodelist_from_string(tpl)
+        t = self.get_translator([])
+        with self.assertRaises(VariableDoesNotExist):
+            t.translate(Context(dict(a=True)), nodelist)
+        self.assertJsEqual(
+            t.translate(Context(dict(a=False)), nodelist),
+            'var a="";return a;',
+        )
+
     def test_tag_loop_try_output_forloop(self):
         tpl = '{% for val in list %}{{ forloop }}{% endfor %}'
         nodelist = nodelist_from_string(tpl)

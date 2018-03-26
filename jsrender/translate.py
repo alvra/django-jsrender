@@ -213,8 +213,9 @@ class Translator(object):
         assert isinstance(condition, TokenBase) and type(condition).__name__ == 'Operator'
         first_var, second_var = condition.first, condition.second
         first = self.resolve_condition(first_var, context)
-        second = self.resolve_condition(second_var, context) if second_var is not None else None
+        resolve_second = lambda: self.resolve_condition(second_var, context)
         if condition.id in self.comparison_operator_functions:
+            second = resolve_second()
             if is_jsexpr(first) or is_jsexpr(second):
                 js = self.comparison_operator_expressions[condition.id]
                 return make_jsexpr(js, first, second)
@@ -222,42 +223,47 @@ class Translator(object):
                 func = self.comparison_operator_functions[condition.id]
                 return func(first, second)
         elif condition.id == 'not':
-            assert second is None
+            assert second_var is None
             if is_jsexpr(first):
                 return make_jsexpr('!(%s)', first)
             else:
                 return not first
         elif condition.id == 'and':
-            if is_jsexpr(first) and is_jsexpr(second):
-                return make_jsexpr('%s&&%s', first, second)
-            elif is_jsexpr(first):
-                if second:
+            if is_jsexpr(first):
+                second = resolve_second()
+                if is_jsexpr(second):
+                    return make_jsexpr('%s&&%s', first, second)
+                elif second:
                     return first
                 else:
                     return False
-            elif is_jsexpr(second):
-                if first:
+            elif first:
+                second = resolve_second()
+                if is_jsexpr(second):
                     return second
                 else:
-                    return False
+                    return bool(second)
             else:
-                return first and second
+                return False
         elif condition.id == 'or':
-            if is_jsexpr(first) and is_jsexpr(second):
-                return make_jsexpr('%s||%s', first, second)
-            elif is_jsexpr(first):
-                if second:
+            if is_jsexpr(first):
+                second = resolve_second()
+                if is_jsexpr(second):
+                    return make_jsexpr('%s||%s', first, second)
+                elif second:
                     return True
                 else:
                     return first
-            elif is_jsexpr(second):
-                if first:
-                    return True
-                else:
-                    return second
+            elif first:
+                return True
             else:
-                return first or second
+                second = resolve_second()
+                if is_jsexpr(second):
+                    return second
+                else:
+                    return bool(second)
         elif condition.id in ['in', 'not in']:
+            second = resolve_second()
             if is_jsexpr(first) or is_jsexpr(second):
                 return make_jsexpr(
                     '(%%s).indexOf(%%s)%s-1' % ('!=' if condition.id == 'in' else '=='),
