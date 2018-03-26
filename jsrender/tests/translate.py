@@ -15,6 +15,14 @@ from .utils import (
 )
 
 
+class TestError(Exception):
+    pass
+
+
+def raise_test_error():
+    raise TestError
+
+
 class VariableResolutionTests(TranslationTestCase):
     def test_standard_lookup(self):
         c = Context(dict(
@@ -209,24 +217,30 @@ class QuickTranslateTests(TranslationTestCase):
                     t.translate(Context(), nodelist)
 
     def test_tag_if_condition_or_lazy_resolution(self):
-        tpl = '{% if a or missing %}x{% endif %}'
+        tpl = '{% if a or b %}x{% endif %}'
         nodelist = nodelist_from_string(tpl)
         t = self.get_translator([])
-        with self.assertRaises(VariableDoesNotExist):
-            t.translate(Context(dict(a=False)), nodelist)
+
+        with self.assertRaises(TestError):
+            t.translate(Context(dict(a=False, b=raise_test_error)), nodelist)
+
+        irrelevant = lambda: self.fail("Resolved irrelevant variable")
         self.assertJsEqual(
-            t.translate(Context(dict(a=True)), nodelist),
+            t.translate(Context(dict(a=True, b=irrelevant)), nodelist),
             'var a="";a+="x";return a;',
         )
 
     def test_tag_if_condition_and_lazy_resolution(self):
-        tpl = '{% if a and missing %}x{% endif %}'
+        tpl = '{% if a and b %}x{% endif %}'
         nodelist = nodelist_from_string(tpl)
         t = self.get_translator([])
-        with self.assertRaises(VariableDoesNotExist):
-            t.translate(Context(dict(a=True)), nodelist)
+
+        with self.assertRaises(TestError):
+            t.translate(Context(dict(a=True, b=raise_test_error)), nodelist)
+
+        irrelevant = lambda: self.fail("Resolved irrelevant variable")
         self.assertJsEqual(
-            t.translate(Context(dict(a=False)), nodelist),
+            t.translate(Context(dict(a=False, b=irrelevant)), nodelist),
             'var a="";return a;',
         )
 
