@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 import six
 from django.template import defaulttags, TemplateSyntaxError
+from django.template.base import VariableDoesNotExist
 from django.template.loader_tags import IncludeNode
 from django.templatetags import i18n
 from django.conf import settings
@@ -115,7 +116,10 @@ class ForloopJavascriptExpression(JavascriptExpression):
 def translate_tag_for(translator, context, node):
     sequence = node.sequence
     # get the value we're looping over
-    sequence_expr = translator.resolve_expression(sequence, context)
+    try:
+        sequence_expr = translator.resolve_expression(sequence, context)
+    except VariableDoesNotExist:
+        return
     if not is_jsexpr(sequence_expr):
         yield translator.write(node.render(context))
     else:

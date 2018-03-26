@@ -256,6 +256,15 @@ class QuickTranslateTests(TranslationTestCase):
         ):
             t.translate(Context(), nodelist)
 
+    def test_tag_loop_undefined_variable(self):
+        tpl = '{% for value in missing %}x{% endfor %}'
+        nodelist = nodelist_from_string(tpl)
+        t = self.get_translator([])
+        self.assertJsEqual(
+            t.translate(Context(), nodelist),
+            'var a="";return a;',
+        )
+
     def test_tag_now(self):
         for letter in string.ascii_letters:
             expr = datetime_format_javascript_expressions.get(letter)
