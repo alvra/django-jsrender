@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 import unittest
 import itertools
+import django
 from ..datetimeformat import datetime_format_javascript_expressions
 from .utils import (
     truthy_values, falsy_values,
@@ -498,8 +499,8 @@ class TagTests(JavascriptTranslationTestCase):
         )
 
     def test_include_loaded(self):
-        with mock.patch('django.template.engine.Engine.find_template') as find:
-            find.return_value = template_from_string('b'), None
+        with mock.patch('django.template.engine.Engine.get_template') as getter:
+            getter.return_value = template_from_string('b')
             self.assertTranslation(
                 'a{% include "other.tpl" %}c',
                 {},
@@ -510,14 +511,26 @@ class TagTests(JavascriptTranslationTestCase):
             # once when translating to javascript
             # and then again when performing
             # the standard rendering to compare results with
-            find.assert_called_with('other.tpl')
+            getter.assert_called_with('other.tpl')
 
     def test_include_template_attr(self):
         class HasTemplateAttr:
             template = template_from_string('{{ var }}{{ extra }}')
 
-            def render(self):
-                raise AssertionError("This should not be called")
+            def render(template, context):
+                if django.VERSION < (2, 0):
+                    self.assertEqual(context.flatten(), {
+                        # defaults
+                        'True': True,
+                        'False': False,
+                        'None': None,
+                        # context
+                        'tpl': template,
+                        'var': 'b',
+                        'extra': 'c'})
+                    return 'bc'
+                else:
+                    raise AssertionError("This should not be called")
 
         self.assertTranslation(
             'a{% include tpl with extra="c" %}d',

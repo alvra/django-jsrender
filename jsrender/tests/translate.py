@@ -221,7 +221,7 @@ class QuickTranslateTests(TranslationTestCase):
         t = self.get_translator(['list'])
         with self.assertRaisesRegex(
             VariableDoesNotExist,
-            "Failed lookup for key \[doesnotexist\] in [u]?'<ForloopValue>'"
+            "Failed lookup for key \[doesnotexist\] in [u]?'?<ForloopValue>'?"
         ):
             t.translate(Context(), nodelist)
 
