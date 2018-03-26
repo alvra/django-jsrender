@@ -4,7 +4,8 @@ from contextlib import contextmanager
 import six
 from django.conf import settings
 from django.template import defaulttags
-from django.template.base import FilterExpression, TextNode, VariableNode
+from django.template.base import (
+    FilterExpression, TextNode, VariableNode, VariableDoesNotExist)
 from django.template.smartif import TokenBase, Literal
 from django.utils.safestring import SafeText
 from .functions import (
@@ -209,7 +210,10 @@ class Translator(object):
     def resolve_condition(self, condition, context):
         "Resolves a condition into a value."
         if isinstance(condition, defaulttags.TemplateLiteral):
-            return self.resolve_expression(condition, context)
+            try:
+                return self.resolve_expression(condition, context)
+            except VariableDoesNotExist:
+                return False
         assert isinstance(condition, TokenBase) and type(condition).__name__ == 'Operator'
         first_var, second_var = condition.first, condition.second
         first = self.resolve_condition(first_var, context)

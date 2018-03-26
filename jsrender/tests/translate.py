@@ -230,6 +230,15 @@ class QuickTranslateTests(TranslationTestCase):
             'var a="";return a;',
         )
 
+    def test_tag_if_variable_is_defined(self):
+        tpl = '{% if missing %}yes{% else %}no{% endif %}'
+        nodelist = nodelist_from_string(tpl)
+        t = self.get_translator([])
+        self.assertJsEqual(
+            t.translate(Context(), nodelist),
+            'var a="";a+="no";return a;',
+        )
+
     def test_tag_loop_try_output_forloop(self):
         tpl = '{% for val in list %}{{ forloop }}{% endfor %}'
         nodelist = nodelist_from_string(tpl)
