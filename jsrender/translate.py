@@ -315,11 +315,23 @@ class Translator(object):
         """
         for node in nodelist:
             pre_level = self.indentation_level
-            for part in self.translate_node(context, node):
-                if not isinstance(part, six.text_type):
-                    raise TypeError("Non text %r from %r" % (part, node))
-                if part != '':
-                    yield part
+            try:
+                for part in self.translate_node(context, node):
+                    if not isinstance(part, six.text_type):
+                        raise TypeError("Non text %r from %r" % (part, node))
+                    if part != '':
+                        yield part
+            except Exception as e:
+                if (context.template is not None and
+                        context.template.engine.debug and
+                        getattr(context.render_context, 'template', None) and
+                        not hasattr(e, 'template_debug')):
+                    # Preserve source location from token onto the exception
+                    # for debugging purposes, like Django does this.
+                    template = context.render_context.template
+                    info = template.get_exception_info(e, node.token)
+                    e.template_debug = info
+                raise
             post_level = self.indentation_level
             if pre_level != post_level:
                 raise AssertionError(

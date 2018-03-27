@@ -7,7 +7,7 @@ try:
     import execjs
 except ImportError:  # pragma: no cover
     execjs = None
-from django.template import Engine, Context
+from django.template import Engine, Template, Context
 from ..functions import express
 from ..translate import Translator
 from ..utils import html_escape_function
@@ -34,10 +34,11 @@ falsy_expressable_values = [
 ]
 
 
-def template_from_string(template_string):
-    return Engine(libraries={
+def template_from_string(template_string, origin=None, name=None, debug=False):
+    engine = Engine(libraries={
         'jsrender': 'jsrender.templatetags.jsrender',
-    }).from_string(template_string)
+    }, debug=debug)
+    return Template(template_string, origin=origin, name=name, engine=engine)
 
 
 def nodelist_from_string(template_string):

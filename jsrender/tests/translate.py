@@ -108,6 +108,30 @@ class QuickTranslateTests(TranslationTestCase):
             t.write(''),
             '')
 
+    def test_template_debug(self):
+        tpl = "hello\nworld {{ missing }} earth\nbye"
+        template = template_from_string(tpl, debug=True)
+        nodelist = template.nodelist
+        context = Context()
+        with context.bind_template(template):
+            # NOTE since Django 2.0 we can also use
+            # with context.render_context.push_state(template):
+            context.render_context.template = template
+            t = self.get_translator([])
+            with self.assertRaisesRegex(
+                    VariableDoesNotExist,
+                    "Failed lookup for key \[missing\] in .+") as x:
+                t.translate(context, nodelist)
+            exception = x.exception
+            debug = exception.template_debug
+            self.assertEqual(debug['name'], '<unknown source>')
+            self.assertEqual(debug['line'], 2)
+            self.assertEqual(debug['start'], 12)
+            self.assertEqual(debug['end'], 25)
+            self.assertEqual(debug['before'], 'world ')
+            self.assertEqual(debug['during'], '{{ missing }}')
+            self.assertEqual(debug['after'], ' earth\n')
+
     def test_text(self):
         tpl = "hello world"
         nodelist = nodelist_from_string(tpl)
