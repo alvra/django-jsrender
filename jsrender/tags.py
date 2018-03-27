@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 import six
+from contextlib import contextmanager
 from django.template import defaulttags, TemplateSyntaxError
 from django.template.base import VariableDoesNotExist
 from django.template.loader_tags import IncludeNode
@@ -23,6 +24,17 @@ def register(filter):
         tag_translators[filter] = translator
         return translator
     return _decorator
+
+
+@contextmanager
+def push_render_state(context, template):
+    try:
+        push_state = context.render_context.push_state
+    except AttributeError:
+        yield
+    else:
+        with push_state(template):
+            yield
 
 
 @register(defaulttags.IfNode)
@@ -273,8 +285,9 @@ def translate_tag_include(translator, context, node):
     if node.isolated_context:
         context = context.new()
     with context.push(values):
-        for part in translator.translate_nodelist(context, nodelist):
-            yield part
+        with push_render_state(context, template):
+            for part in translator.translate_nodelist(context, nodelist):
+                yield part
 
 
 @register(defaulttags.FilterNode)
