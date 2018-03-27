@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import six
 from contextlib import contextmanager
 from django.template import defaulttags, TemplateSyntaxError
-from django.template.base import VariableDoesNotExist
+from django.template.base import TextNode, VariableNode, VariableDoesNotExist
 from django.template.loader_tags import IncludeNode
 from django.templatetags import i18n
 from django.conf import settings
@@ -35,6 +35,19 @@ def push_render_state(context, template):
     else:
         with push_state(template):
             yield
+
+
+@register(TextNode)
+def translate_node_text(translator, context, node):
+    text = node.render(context)
+    yield translator.write(mark_safe(text))
+
+
+@register(VariableNode)
+def translate_node_variable(translator, context, node):
+    value = translator.resolve_expression(node.filter_expression, context)
+    if value != '':
+        yield translator.write(value)
 
 
 @register(defaulttags.IfNode)

@@ -4,8 +4,7 @@ from contextlib import contextmanager
 import six
 from django.conf import settings
 from django.template import defaulttags
-from django.template.base import (
-    FilterExpression, TextNode, VariableNode, VariableDoesNotExist)
+from django.template.base import FilterExpression, VariableDoesNotExist
 from django.template.smartif import TokenBase, Literal
 from django.utils.safestring import SafeText
 from .functions import (
@@ -333,14 +332,7 @@ class Translator(object):
 
         This can be used in tag translation implementations to translate a subnode.
         """
-        if isinstance(node, TextNode):
-            text = node.render(context)
-            yield self.write(mark_safe(text))
-        elif isinstance(node, VariableNode):
-            value = self.resolve_expression(node.filter_expression, context)
-            if value != '':
-                yield self.write(value)
-        elif type(node) in self.tag_translators:
+        if type(node) in self.tag_translators:
             translator = self.tag_translators[type(node)]
             for part in translator(self, context, node):
                 yield part
