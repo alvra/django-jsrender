@@ -1,3 +1,4 @@
+import six
 from django.utils.html import mark_safe
 
 
@@ -13,8 +14,9 @@ class TemplateFunction(object):
     def __str__(self):
         return self.script
 
-    def __unicode__(self):
-        return self.script
+    if six.PY2:
+        def __unicode__(self):
+            return self.script
 
     def __repr__(self):
         return '<TemplateFunction %s(%s)>' % (

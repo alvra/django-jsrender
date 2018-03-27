@@ -610,7 +610,7 @@ class TagTests(JavascriptTranslationTestCase):
                         'var': 'b',
                         'extra': 'c'})
                     return 'bc'
-                else:
+                else:  # pragma: no cover
                     raise AssertionError("This should not be called")
 
         self.assertTranslation(

@@ -102,6 +102,12 @@ class QuickTranslateTests(TranslationTestCase):
         with self.assertRaises(TypeError):
             t.write(b'abc')
 
+    def test_write_empty(self):
+        t = self.get_translator([])
+        self.assertEqual(
+            t.write(''),
+            '')
+
     def test_text(self):
         tpl = "hello world"
         nodelist = nodelist_from_string(tpl)
@@ -158,6 +164,16 @@ class QuickTranslateTests(TranslationTestCase):
         self.assertJsEqual(
             t.translate(Context(), nodelist),
             'var a="";a+=escape(b);return a;',
+        )
+
+    def test_variable_empty_text(self):
+        tpl = "{{ name }}"
+        nodelist = nodelist_from_string(tpl)
+
+        t = self.get_translator([])
+        self.assertJsEqual(
+            t.translate(Context(dict(name='')), nodelist),
+            'var a="";return a;',
         )
 
     def test_variable_lazy_translated_text(self):

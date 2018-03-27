@@ -5,7 +5,7 @@ import six
 import contextlib
 try:
     import execjs
-except ImportError:
+except ImportError:  # pragma: no cover
     execjs = None
 from django.template import Engine, Context
 from ..functions import express
@@ -49,7 +49,7 @@ class JsrenderTestMixin(object):
     def subTest(self, *args, **kwargs):
         if hasattr(unittest.TestCase, 'subTest'):
             return super().subTest(*args, **kwargs)
-        else:
+        else:  # pragma: no cover
             @contextlib.contextmanager
             def noop():
                 try:
@@ -109,7 +109,7 @@ class JavascriptTranslationMixin(TranslationMixin):
     def get_html_escape_function(cls):
         return html_escape_function(cls.html_escape_function)
 
-    def setUp(self):
+    def setUp(self):  # pragma: no cover
         if execjs is None:
             raise unittest.SkipTest(
                 "PyExecJs must be installed to run these tests.")
