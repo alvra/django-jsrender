@@ -423,12 +423,85 @@ class TagTests(JavascriptTranslationTestCase):
                 tplargs,
             )
 
+    def test_loop_undefined(self):
+        self.assertTranslation(
+            '{% for item in missing %}{{ item }}{% endfor %}',
+            {},
+            {},
+            '',
+        )
+
+    def test_loop_undefined_with_empty(self):
+        self.assertTranslation(
+            '{% for item in missing %}{{ item }}{% empty %}e{% endfor %}',
+            {},
+            {},
+            'e',
+        )
+        self.assertTranslation(
+            '{% for item in missing %}{{ item }}{% empty %}{{ var }}{% endfor %}',
+            {},
+            dict(var='x'),
+            'x',
+        )
+
     def test_loop_literal(self):
         self.assertTranslation(
             '{% for char in "abc" %}{{ char }}{% endfor %}',
             {},
             {},
             'abc',
+        )
+
+    def test_loop_literal_reversed(self):
+        self.assertTranslation(
+            '{% for char in "abc" reversed %}{{ char }}{% endfor %}',
+            {},
+            {},
+            'cba',
+        )
+
+    def test_loop_literal_empty(self):
+        self.assertTranslation(
+            '{% for char in "" %}{{ char }}{% empty %}e{% endfor %}',
+            {},
+            {},
+            'e',
+        )
+
+    def test_loop_literal_with_jsexpr(self):
+        self.assertTranslation(
+            '{% for char in "abc" %}{{ char }}{{ var }} {% endfor %}',
+            {},
+            dict(var='X'),
+            'aX bX cX ',
+        )
+
+    def test_loop_literal_empty_with_jsexpr(self):
+        self.assertTranslation(
+            '{% for char in "" %}{{ char }}{% empty %}{{ var }}{% endfor %}',
+            {},
+            dict(var='x'),
+            'x',
+        )
+
+    def test_loop_static_without_len(self):
+        # We need to wrap the iterable in a lambda because we need
+        # to render this template twice, once as a regular Django template
+        # and once translated to Javascript.
+        # The lambda is called when resolving the variable,
+        # and ensures the result is the same each time.
+        self.assertTranslation(
+            '{% for char in sequence %}{{ char }}{% endfor %}',
+            dict(sequence=lambda: iter('abc')),
+            {},
+            'abc',
+        )
+        self.assertTranslation(
+            '{% for char in sequence reversed %}{{ char }}{% endfor %}',
+            dict(sequence=lambda: iter('abc')),
+            {},
+            'cba',
         )
 
     def test_now(self):

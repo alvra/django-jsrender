@@ -119,9 +119,46 @@ def translate_tag_for(translator, context, node):
     try:
         sequence_expr = translator.resolve_expression(sequence, context)
     except VariableDoesNotExist:
-        return
+        sequence_expr = []
     if not is_jsexpr(sequence_expr):
-        yield translator.write(node.render(context))
+        if not hasattr(sequence_expr, '__len__'):
+            sequence_expr = list(sequence_expr)
+        sequence_length = len(sequence_expr)
+        if sequence_length > 0:
+            if node.is_reversed:
+                sequence_expr = reversed(sequence_expr)
+            with context.push():
+                forloop = dict(parentloop=context.get('forloop', None))
+                context['forloop'] = forloop
+                for index, item in enumerate(sequence_expr):
+                    # assign the loopvars
+                    if len(node.loopvars) == 1:
+                        context[node.loopvars[0]] = item
+                    else:
+                        try:
+                            len_item = len(item)
+                        except TypeError:
+                            len_item = 1
+                        if len(node.loopvars) != len_item:
+                            raise ValueError(
+                                "Need {} values to unpack in for loop; got {}."
+                                .format(len(node.loopvars), len_item))
+                        for varname, item_value in zip(node.loopvars, item):
+                            context[varname] = item_value
+                    # update the 'forloop' variable
+                    forloop['counter0'] = index
+                    forloop['counter'] = index + 1
+                    forloop['revcounter'] = sequence_length - index
+                    forloop['revcounter0'] = sequence_length - index - 1
+                    forloop['first'] = (index == 0)
+                    forloop['last'] = (index == sequence_length - 1)
+                    # write the loop body
+                    for part in translator.translate_nodelist(
+                            context, node.nodelist_loop):
+                        yield part
+        elif node.nodelist_empty:
+            for part in translator.translate_nodelist(context, node.nodelist_empty):
+                yield part
     else:
         # if the sequnce_expr is complex (ie: has filters),
         # store it in a variable and work with that

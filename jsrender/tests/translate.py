@@ -290,6 +290,29 @@ class QuickTranslateTests(TranslationTestCase):
             'var a="";return a;',
         )
 
+    def test_loop_static_unpack_mismatch(self):
+        tpl = '{% for x, y in sequence %}{{ char }}{% endfor %}'
+        nodelist = nodelist_from_string(tpl)
+        t = self.get_translator([])
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Need 2 values to unpack in for loop; got 3."
+        ):
+            t.translate(Context(dict(sequence=[(1, 2, 3)])), nodelist)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Need 2 values to unpack in for loop; got 1."
+        ):
+            t.translate(Context(dict(sequence=[(1,)])), nodelist)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Need 2 values to unpack in for loop; got 1."
+        ):
+            t.translate(Context(dict(sequence=[None])), nodelist)
+
     def test_tag_now(self):
         for letter in string.ascii_letters:
             expr = datetime_format_javascript_expressions.get(letter)
