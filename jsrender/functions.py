@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 import datetime
+import decimal
 import json
 import six
 from django.utils import html
@@ -20,6 +21,8 @@ def resolve_lazy_text(value):
 
 def as_javascript(value):
     "Translate a pure Python value to Javascript"
+    if isinstance(value, decimal.Decimal):
+        return six.text_type(value)
     if is_lazy_text(value):
         value = resolve_lazy_text(value)
     return six.text_type(json.dumps(value))

@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 import unittest
 import operator
 import string
+import decimal
 from django.template import (
     defaulttags, Context, Node,
     Variable, VariableDoesNotExist, TemplateSyntaxError,
@@ -208,6 +209,17 @@ class QuickTranslateTests(TranslationTestCase):
         self.assertJsEqual(
             t.translate(Context(dict(name=gettext_lazy('ham'))), nodelist),
             'var a="";a+="ham";return a;',
+        )
+
+    def test_variable_decimal(self):
+        tpl = "{{ number }}"
+        nodelist = nodelist_from_string(tpl)
+
+        t = self.get_translator([])
+        number = decimal.Decimal('3.141')
+        self.assertJsEqual(
+            t.translate(Context(dict(number=number)), nodelist),
+            'var a="";a+="3.141";return a;',
         )
 
     def test_missing_variable(self):

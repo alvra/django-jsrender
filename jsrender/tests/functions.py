@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 import unittest
 import six
+import decimal
 from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy
 from ..functions import (
@@ -25,6 +26,11 @@ class AsJavascriptTests(unittest.TestCase):
         self.assertEqual(
             as_javascript(123.456),
             '123.456')
+
+    def test_decimal(self):
+        self.assertEqual(
+            as_javascript(decimal.Decimal('3.141')),
+            '3.141')
 
     def test_lazy_translated_text(self):
         self.assertEqual(
